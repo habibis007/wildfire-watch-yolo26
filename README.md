@@ -2,8 +2,7 @@
 
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/habibis007/wildfire-watch-yolo26/blob/main/notebooks/wildfire_demo.ipynb)
 
-<!-- GIF of the annotated output goes here once the model is trained:
-![Annotated drone footage with fire and smoke boxes](docs/img/demo.gif) -->
+![Annotated drone footage of a prescribed burn: blue smoke box, orange fire box, red alert banner](docs/img/demo.gif)
 
 A teaching demo. It takes a drone video, detects **fire** and **smoke** frame by frame with
 a YOLO26 model fine-tuned on Roboflow, draws colour-coded boxes, raises an alert only when
@@ -15,7 +14,8 @@ detections **persist** across frames, and writes an annotated output video.
 2. *Runtime → Change runtime type → T4 GPU*.
 3. Add your Roboflow API key as a Colab Secret named `ROBOFLOW_API_KEY`
    (key icon in the left sidebar; allow notebook access).
-4. *Runtime → Run all*. The full run takes under 2 minutes on a T4.
+4. *Runtime → Run all*. The detection loop over a 30 s clip takes about 5 s even on a laptop
+   CPU, so most of the run time is the package install.
 
 No key or no network? The notebook falls back to detections cached from an earlier run,
 so the demo still plays.
@@ -28,14 +28,14 @@ so the demo still plays.
 | 2. Frame extraction: `cv2.VideoCapture`, every Nth frame, frame strip | [`frames.py`](src/wildfire/frames.py) |
 | 3. Preprocessing: resize, optional CLAHE for hazy smoke | [`preprocess.py`](src/wildfire/preprocess.py) |
 | 4. Detection: load the model by its Roboflow ID, run it locally | [`detections.py`](src/wildfire/detections.py) |
-| 5. Visualization: fire (red-orange) vs smoke (slate) boxes | [`draw.py`](src/wildfire/draw.py) |
+| 5. Visualization: fire (red-orange) vs smoke (blue) boxes | [`draw.py`](src/wildfire/draw.py) |
 | 6. Alert logic: alert after N consecutive sampled frames, with timestamps | [`alerts.py`](src/wildfire/alerts.py) |
 | 7. Output: annotated video, writer always closed, H.264 for browsers | [`writer.py`](src/wildfire/writer.py) |
 
 **Why persistence?** A single-frame detection is often a false positive (sun glare, a red
 roof, low cloud). Requiring the same class in 5 sampled frames in a row costs a second or
-two of latency but removes most false alarms. A one-frame dropout during an active event
-doesn't end it, so one fire produces one alert.
+two of latency but removes most false alarms. A short dropout (under about a second) during
+an active event doesn't end it, so one plume produces one alert.
 
 **Why the writer is a context manager:** `cv2.VideoWriter` only writes the file's index
 when `release()` is called. If it isn't (an exception, an interrupted cell), the output
@@ -49,6 +49,20 @@ is truncated or unplayable.
 - **Data:** about 2,850 images, merged to exactly two classes, `fire` and `smoke`. Resized
   to 640, with light augmentation (horizontal flip, ±20% brightness, 1.5 px blur to mimic
   haze). Sources and licences are listed in [docs/DATASETS.md](docs/DATASETS.md).
+
+Results on held-out images (Roboflow Train, 83 epochs):
+
+| Split | Class | Precision | Recall | mAP50 | mAP50-95 |
+|---|---|---|---|---|---|
+| valid | all | 0.68 | 0.54 | 0.59 | 0.29 |
+| valid | fire | 0.65 | 0.51 | 0.54 | 0.26 |
+| valid | smoke | 0.71 | 0.58 | 0.63 | 0.33 |
+| test | all | 0.65 | 0.55 | 0.57 | 0.29 |
+
+On the sample clips, the model raises a smoke alert 11 s into clip 01, a few seconds after
+smoke drifts into view, and flags small flame patches through the smoke in clip 02. It struggles
+with the hazy ground-level clip 03, which is a useful discussion point: it was trained
+mostly on aerial and surveillance-camera views.
 
 ## Reproduce the dataset and model
 

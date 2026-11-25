@@ -46,7 +46,7 @@ class _Track:
 class PersistenceAlert:
     classes: tuple[str, ...] = ("fire", "smoke")
     min_consecutive: int = 5
-    clear_after: int = 3
+    clear_after: int = 5
     min_confidence: float = 0.4
     events: list[AlertEvent] = field(default_factory=list)
     _tracks: dict[str, _Track] = field(default_factory=dict, init=False, repr=False)

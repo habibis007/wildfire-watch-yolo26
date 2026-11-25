@@ -131,7 +131,13 @@ print(f"{len(sampled)} of {info['frame_count']} frames will go to the model (eve
 
 The model resizes to 640 internally, but resizing first means less data to move to the GPU.
 **CLAHE** (Contrast Limited Adaptive Histogram Equalisation) boosts local contrast, which can
-make thin, hazy smoke easier to see. Compare:
+make thin, hazy smoke easier **for people** to see. Compare:
+
+> **Does it help the model?** Not this one. In our tests on the sample clips, turning CLAHE on
+> found slightly *fewer* smoke frames (19 vs 23 on the hazy clip) and moved the first alert by
+> only 0.3 s. The model learned from un-enhanced images, so enhancing at inference time shows it
+> pictures that look different from its training data. Rule of thumb: preprocess at inference
+> exactly as you did in training.
 """),
     code("""
 frame = sampled[picks[2]].image
@@ -175,7 +181,7 @@ sf = sampled[picks[2]]
 t0 = time.perf_counter(); dets = detect(sf.index, sf.image); dt = time.perf_counter() - t0
 print(f"{len(dets)} detections in {dt*1000:.0f} ms:", [(d.class_name, round(d.confidence, 2)) for d in dets])
 """),
-    md("## 5. Visualization\n\nFire is drawn in **red-orange**, smoke in **slate blue-grey**."),
+    md("## 5. Visualization\n\nFire is drawn in **red-orange**, smoke in **blue**."),
     code("""
 plt.figure(figsize=(12, 7)); show(draw_detections(sf.image, dets), f"t={sf.timestamp:.1f}s"); plt.show()
 """),
@@ -233,7 +239,7 @@ if IN_COLAB:
     md("""
 ## Things to try
 
-- Set `USE_CLAHE = True` and re-run steps 4 onwards. Does it find hazy smoke earlier?
+- Set `USE_CLAHE = True` and `VIDEO = "samples/clip_03_ground_haze.mp4"`, then re-run steps 4 onwards. Compare the alert time.
 - Lower `MIN_CONSECUTIVE` to 1: how many false alarms appear?
 - Change `EVERY_N`: faster processing vs slower reaction.
 """),

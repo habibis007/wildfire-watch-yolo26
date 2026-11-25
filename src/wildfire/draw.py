@@ -9,11 +9,11 @@ import numpy as np
 
 from .detections import Detection
 
-# BGR colours. Fire is red-orange, smoke is a light slate grey-blue so it stays
-# visible against both grey smoke and green/brown terrain.
+# BGR colours. Fire is red-orange; smoke is a strong blue so the box stands out
+# against white/grey smoke as well as green and brown terrain.
 CLASS_COLORS: dict[str, tuple[int, int, int]] = {
     "fire": (0, 69, 255),
-    "smoke": (200, 180, 150),
+    "smoke": (255, 140, 0),
 }
 DEFAULT_COLOR = (0, 255, 255)
 
@@ -22,7 +22,7 @@ def draw_detections(image: np.ndarray, detections: Iterable[Detection], thicknes
     """Return a copy of ``image`` with boxes and "class 0.87" labels drawn on it."""
     out = image.copy()
     h, w = out.shape[:2]
-    t = thickness or max(2, round(min(h, w) / 300))
+    t = thickness or max(2, round(min(h, w) / 240))
     font_scale = max(0.5, min(h, w) / 1000)
     for d in detections:
         color = CLASS_COLORS.get(d.class_name, DEFAULT_COLOR)
