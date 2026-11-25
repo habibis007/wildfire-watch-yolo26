@@ -46,7 +46,7 @@ is truncated or unplayable.
 - **Model:** YOLO26 Nano, fine-tuned from COCO-pretrained weights on Roboflow Train
   (transfer learning). It loads by ID (`wildfire-watch-yolo26/<version>`); no weights are
   stored in this repo.
-- **Data:** about 3,000 images, merged to exactly two classes, `fire` and `smoke`. Resized
+- **Data:** about 2,850 images, merged to exactly two classes, `fire` and `smoke`. Resized
   to 640, with light augmentation (horizontal flip, ±20% brightness, 1.5 px blur to mimic
   haze). Sources and licences are listed in [docs/DATASETS.md](docs/DATASETS.md).
 

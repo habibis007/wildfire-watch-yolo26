@@ -40,10 +40,37 @@ class Source:
     # source class name (case-insensitive) -> "fire" | "smoke"; anything else is dropped
     class_map: dict[str, str] = field(default_factory=dict)
     note: str = ""
+    # skip images whose ORIGINAL filename starts with any of these (e.g. D-Fire's
+    # "WEB"/"AoF" images that also appear in another source)
+    exclude_prefixes: tuple[str, ...] = ()
+    # Roboflow exports name augmented copies "<orig>_jpg.rf.<hash>.jpg"; keep one per original
+    dedupe_augmented: bool = False
 
 
-# Filled in after the license/quality review (see docs/DATASETS.md).
-SOURCES: list[Source] = []
+FIRE_SMOKE = {"fire": "fire", "smoke": "smoke", "wildfire": "fire"}
+
+# Chosen after the licence/quality review in docs/DATASETS.md. Target ~3,000 images.
+SOURCES: list[Source] = [
+    Source("master-candidate", "forest-fire-and-smoke-rf4pd", 23, max_images=1500, class_map=FIRE_SMOKE,
+           note="aerial/oblique drone forest fires, CC BY 4.0",
+           exclude_prefixes=("WEB", "AoF"), dedupe_augmented=True),
+    Source("fire-detection-nlrcv", "9.5ai-d-fire", 1, max_images=1200, class_map=FIRE_SMOKE,
+           note="D-Fire (ground-level base), CC BY 4.0 on Universe / CC0 upstream"),
+    Source("tim-4ijf0", "drone-fire-detection-byija", 1, max_images=152, class_map=FIRE_SMOKE,
+           note="top-down drone, fire only, CC BY 4.0"),
+]
+
+
+def original_stem(file_name: str) -> str:
+    """'img_001_jpg.rf.ab12.jpg' -> 'img_001' ; 'WEB123.jpg' -> 'WEB123'."""
+    name = Path(file_name).name
+    if ".rf." in name:
+        name = name.split(".rf.")[0]
+        for ext in ("_jpg", "_jpeg", "_png"):
+            if name.lower().endswith(ext):
+                return name[: -len(ext)]
+        return name
+    return Path(name).stem
 
 
 def api_key() -> str:
@@ -97,6 +124,7 @@ def build() -> None:
             r.workspace(s.workspace).project(s.project).version(s.version).download("coco", location=str(dl_dir))
         # gather (split, image_record, annotations) for images that keep >= 1 box after remapping
         pool = []
+        seen: set[str] = set()
         for split in ("train", "valid", "test"):
             coco = _load_coco_split(dl_dir / split)
             if coco is None:
@@ -108,8 +136,16 @@ def build() -> None:
                 if new:
                     by_img.setdefault(a["image_id"], []).append({**a, "_cls": new})
             for img in coco["images"]:
-                if img["id"] in by_img:
-                    pool.append((split, dl_dir / split / img["file_name"], img, by_img[img["id"]]))
+                if img["id"] not in by_img:
+                    continue
+                stem = original_stem(img["file_name"])
+                if s.exclude_prefixes and stem.startswith(s.exclude_prefixes):
+                    continue
+                if s.dedupe_augmented:
+                    if stem in seen:
+                        continue
+                    seen.add(stem)
+                pool.append((split, dl_dir / split / img["file_name"], img, by_img[img["id"]]))
         random.shuffle(pool)
         chosen = pool[: s.max_images]
         counts = {"images": len(chosen), "fire": 0, "smoke": 0}
