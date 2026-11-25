@@ -92,7 +92,7 @@ print("API key loaded:", bool(ROBOFLOW_API_KEY))
     code("""
 # ---- Settings you might change on stage ----
 MODEL_ID        = "wildfire-watch-yolo26/1"   # <workspace project>/<version> on Roboflow
-VIDEO           = "samples/clip_01.mp4"       # relative to the repo
+VIDEO           = "samples/clip_01_drone_smoke_onset.mp4"
 EVERY_N         = 5      # run the model on every 5th frame
 MIN_CONSECUTIVE = 5      # alert after 5 sampled frames in a row
 CONFIDENCE      = 0.40   # ignore weaker detections
