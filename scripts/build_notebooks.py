@@ -91,7 +91,7 @@ print("API key loaded:", bool(ROBOFLOW_API_KEY))
 """),
     code("""
 # ---- Settings you might change on stage ----
-MODEL_ID        = "wildfire-watch-yolo26/1"   # <workspace project>/<version> on Roboflow
+MODEL_ID        = "wildfire-watch-yolo26-cicrc/1"   # <project>/<version> on Roboflow
 VIDEO           = "samples/clip_01_drone_smoke_onset.mp4"
 EVERY_N         = 5      # run the model on every 5th frame
 MIN_CONSECUTIVE = 5      # alert after 5 sampled frames in a row
@@ -264,8 +264,8 @@ except Exception:
     API_KEY = os.environ["ROBOFLOW_API_KEY"]
 """),
     code("""
-WORKSPACE = "your-workspace"          # from the Roboflow URL
-PROJECT   = "wildfire-watch-yolo26"
+WORKSPACE = "habeebs-workspace-gjewr"  # from the Roboflow URL
+PROJECT   = "wildfire-watch-yolo26-cicrc"
 VERSION   = 1
 MODEL     = "yolo26n.pt"              # or yolo26s.pt
 EPOCHS    = 60

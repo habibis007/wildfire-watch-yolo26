@@ -44,7 +44,7 @@ is truncated or unplayable.
 ## Model and data
 
 - **Model:** YOLO26 Nano, fine-tuned from COCO-pretrained weights on Roboflow Train
-  (transfer learning). It loads by ID (`wildfire-watch-yolo26/<version>`); no weights are
+  (transfer learning). It loads by ID ([`wildfire-watch-yolo26-cicrc/1`](https://universe.roboflow.com/habeebs-workspace-gjewr/wildfire-watch-yolo26-cicrc)); no weights are
   stored in this repo.
 - **Data:** about 2,850 images, merged to exactly two classes, `fire` and `smoke`. Resized
   to 640, with light augmentation (horizontal flip, ±20% brightness, 1.5 px blur to mimic

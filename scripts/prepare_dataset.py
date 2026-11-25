@@ -25,7 +25,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 DATA = ROOT / "data"
 MERGED = DATA / "merged"
-TARGET_PROJECT = "wildfire-watch-yolo26"
+TARGET_PROJECT = "wildfire-watch-yolo26-cicrc"  # Roboflow slug (the SDK added the suffix)
 SEED = 26
 CATEGORIES = [{"id": 0, "name": "fire", "supercategory": "none"}, {"id": 1, "name": "smoke", "supercategory": "none"}]
 CAT_ID = {"fire": 0, "smoke": 1}
@@ -53,7 +53,7 @@ FIRE_SMOKE = {"fire": "fire", "smoke": "smoke", "wildfire": "fire"}
 SOURCES: list[Source] = [
     Source("master-candidate", "forest-fire-and-smoke-rf4pd", 23, max_images=1500, class_map=FIRE_SMOKE,
            note="aerial/oblique drone forest fires, CC BY 4.0",
-           exclude_prefixes=("WEB", "AoF"), dedupe_augmented=True),
+           exclude_prefixes=("WEB", "AoF", "PublicDataset"), dedupe_augmented=True),
     Source("fire-detection-nlrcv", "9.5ai-d-fire", 1, max_images=1200, class_map=FIRE_SMOKE,
            note="D-Fire (ground-level base), CC BY 4.0 on Universe / CC0 upstream"),
     Source("tim-4ijf0", "drone-fire-detection-byija", 1, max_images=152, class_map=FIRE_SMOKE,
@@ -150,7 +150,9 @@ def build() -> None:
         chosen = pool[: s.max_images]
         counts = {"images": len(chosen), "fire": 0, "smoke": 0}
         for split, path, img, anns in chosen:
-            coco = merged.setdefault(split, {"images": [], "annotations": [], "categories": CATEGORIES})
+            coco = merged.setdefault(split, {"info": {"description": "wildfire-watch-yolo26 merged fire/smoke"},
+                                               "licenses": [{"id": 1, "name": "CC BY 4.0"}],
+                                               "images": [], "annotations": [], "categories": CATEGORIES})
             out = MERGED / split
             out.mkdir(parents=True, exist_ok=True)
             fname = f"{tag}__{Path(img['file_name']).name}"
@@ -168,7 +170,7 @@ def build() -> None:
     # Roboflow's own COCO layout: <split>/_annotations.coco.json next to the images.
     for split, coco in merged.items():
         (MERGED / split / "_annotations.coco.json").write_text(json.dumps(coco))
-    (MERGED / "manifest.json").write_text(json.dumps({"seed": SEED, "sources": [s.__dict__ for s in SOURCES], "totals": totals}, indent=2))
+    (DATA / "merged_manifest.json").write_text(json.dumps({"seed": SEED, "sources": [s.__dict__ for s in SOURCES], "totals": totals}, indent=2))
     print("\nTotal images:", sum(t["images"] for t in totals.values()))
 
 
@@ -176,9 +178,24 @@ def upload() -> None:
     if not MERGED.exists():
         sys.exit("Run `build` first.")
     ws = rf().workspace()
-    print(f"Uploading {MERGED} to {ws.url}/{TARGET_PROJECT} ...")
-    ws.upload_dataset(str(MERGED), TARGET_PROJECT, project_license="CC BY 4.0", project_type="object-detection")
-    print("Done. Next: python scripts/train_on_roboflow.py version")
+    # Resolve (or create) the project ONCE. The SDK's upload_dataset otherwise re-looks it up,
+    # and a transient API error there makes it silently create "<name>-xxxxx" instead.
+    try:
+        project = ws.project(TARGET_PROJECT)
+    except Exception:
+        project = ws.create_project(TARGET_PROJECT, "object-detection", "CC BY 4.0", TARGET_PROJECT)
+    ws._get_or_create_project = lambda *a, **k: (project, False)
+    print(f"Uploading {MERGED} to {project.id} ...")
+    ws.upload_dataset(str(MERGED), TARGET_PROJECT, num_retries=3)
+
+    expected = sum(len(json.loads(f.read_text())["images"]) for f in MERGED.glob("*/_annotations.coco.json"))
+    import requests
+
+    info = requests.get(f"https://api.roboflow.com/{project.id}", params={"api_key": api_key(), "nocache": "true"},
+                        timeout=60).json()["project"]
+    print(f"Project now has {info['images']} images (expected up to {expected}; byte-identical duplicates are skipped), "
+          f"splits {info['splits']}, classes {info['classes']}")
+    print("Next: python scripts/train_on_roboflow.py version")
 
 
 if __name__ == "__main__":
