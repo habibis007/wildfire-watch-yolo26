@@ -1,0 +1,13 @@
+# Demo notebook (on a GPU, the notebook installs inference-gpu instead of inference)
+inference
+supervision
+opencv-python
+numpy
+matplotlib
+
+# Dataset preparation scripts
+roboflow
+python-dotenv
+
+# Tests
+pytest

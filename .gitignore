@@ -1,0 +1,24 @@
+# secrets
+.env
+*.env
+roboflow.json
+
+# model weights and training artefacts (the model loads from Roboflow by ID)
+*.pt
+*.onnx
+*.engine
+runs/
+datasets/
+data/
+
+# generated output
+outputs/
+*_annotated*.mp4
+
+# python
+.venv/
+__pycache__/
+*.egg-info/
+.pytest_cache/
+.ipynb_checkpoints/
+.DS_Store
